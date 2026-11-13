@@ -83,27 +83,30 @@ defmodule ZfsMonitor do
   end
 
 
-  def run(command, args \\ [], opts \\ []) do
-    executable =
-      System.find_executable(command)
+  
+  def run(command, args \\ [], _opts \\ []) do
+    executable = System.find_executable(command)
 
     if executable do
-      {output, exit_code} =
-        System.cmd(
-          executable,
-          args,
-          stderr_to_stdout: true,
-          timeout: Keyword.get(opts, :timeout, 15_000)
-        )
+      try do
+        case System.cmd(
+              executable,
+              args,
+              stderr_to_stdout: true
+            ) do
+          {output, 0} ->
+            {:ok, String.trim(output)}
 
-      case exit_code do
-        0 -> {:ok, String.trim(output)}
-        code ->
-          {:error,
-           %{
-             exit_code: code,
-             output: String.trim(output)
-           }}
+          {output, code} ->
+            {:error,
+            %{
+              exit_code: code,
+              output: String.trim(output)
+            }}
+        end
+      rescue
+        error ->
+          {:error, Exception.message(error)}
       end
     else
       {:error, :command_not_found}
