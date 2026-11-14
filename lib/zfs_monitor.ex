@@ -83,6 +83,36 @@ defmodule ZfsMonitor do
   end
 
 
+
+  def run_sudo(command, args \\ []) do
+    executable = System.find_executable(command)
+
+    if executable do
+      try do
+        case System.cmd(
+              "sudo",
+              ["-n", executable | args],
+              stderr_to_stdout: true
+            ) do
+          {output, 0} ->
+            {:ok, String.trim(output)}
+
+          {output, code} ->
+            {:error,
+            %{
+              exit_code: code,
+              output: String.trim(output)
+            }}
+        end
+      rescue
+        error ->
+          {:error, Exception.message(error)}
+      end
+    else
+      {:error, :command_not_found}
+    end
+  end
+
   
   def run(command, args \\ [], _opts \\ []) do
     executable = System.find_executable(command)
